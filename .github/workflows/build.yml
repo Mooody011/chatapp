@@ -46,19 +46,27 @@ jobs:
           cp -f pubspec.yaml temp_build/pubspec.yaml
           
           # نقل ملف الفايربيز السحري للمكان المظبوط
-          mkdir -p temp_build/android/app
+          mkdir -p temp_build/android/app/src/main
           cp -f android/app/google-services.json temp_build/android/app/google-services.json
           
-          # 1. حقن صلاحية الإنترنت في الـ AndroidManifest عشان التطبيق يتصل بالفايربيز
-          sed -i '/<application/i \    <uses-permission android:name="android.permission.INTERNET"/>' temp_build/android/app/src/main/AndroidManifest.xml
+          # كتابة ملف Manifest كامل ومضمون وفيه صلاحية الإنترنت
+          cat <<EOT > temp_build/android/app/src/main/AndroidManifest.xml
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <uses-permission android:name="android.permission.INTERNET"/>
+              <application android:label="chatapp" android:name="\${applicationName}" android:icon="@mipmap/ic_launcher">
+                  <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTop">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN"/>
+                          <category android:name="android.intent.category.LAUNCHER"/>
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOT
           
-          # 2. حقن إضافة الفايربيز في ملف settings.gradle الرئيسي
+          # حقن إضافات الفايربيز وتعديل الـ SDK
           sed -i '/plugins {/a \    id "com.google.gms.google-services" version "4.4.1" apply false' temp_build/android/settings.gradle
-          
-          # 3. حقن تطبيق الفايربيز في ملف build.gradle الفرعي
           sed -i '/plugins {/a \    id "com.google.gms.google-services"' temp_build/android/app/build.gradle
-          
-          # 4. رفع الـ minSdkVersion لـ 21 لضمان تشغيل الفايربيز بدون مشاكل
           sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 21/g' temp_build/android/app/build.gradle || true
           sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 21/g' temp_build/android/app/build.gradle || true
 
