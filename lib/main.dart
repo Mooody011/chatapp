@@ -4,8 +4,29 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(); // تهيئة الفايربيز
-  runApp(ChatApp());
+  try {
+    // محاولة تهيئة الفايربيز
+    await Firebase.initializeApp();
+    runApp(ChatApp());
+  } catch (e) {
+    // لو حصل خطأ بيطبع رسالة حمراء واضحة على الموبايل بدل الشاشة السوداء
+    runApp(MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        body: Container(
+          color: Colors.red[900],
+          padding: EdgeInsets.all(20),
+          child: Center(
+            child: Text(
+              'حصلت مشكلة في الفايربيز يا غالي:\n\n$e',
+              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      ),
+    ));
+  }
 }
 
 class ChatApp extends StatelessWidget {
@@ -23,7 +44,6 @@ class ChatApp extends StatelessWidget {
   }
 }
 
-// شاشة بسيطة لكتابة اسم المستخدم قبل الدخول
 class LoginScreen extends StatefulWidget {
   @override
   _LoginScreenState createState() => _LoginScreenState();
@@ -93,7 +113,6 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
-// شاشة الشات الأساسية
 class ChatScreen extends StatefulWidget {
   final String username;
   ChatScreen({required this.username});
@@ -127,7 +146,6 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
       body: Column(
         children: [
-          // عرض الرسائل في الوقت الفعلي
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: _firestore.collection('messages').orderBy('timestamp', descending: true).snapshots(),
@@ -179,7 +197,6 @@ class _ChatScreenState extends State<ChatScreen> {
               },
             ),
           ),
-          // مكان كتابة وإرسال الرسائل
           Container(
             padding: const EdgeInsets.all(10.0),
             color: Colors.white,
