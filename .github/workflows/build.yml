@@ -49,7 +49,7 @@ jobs:
           mkdir -p temp_build/android/app
           cp -f android/app/google-services.json temp_build/android/app/google-services.json
           
-          # تعديل ملف build.gradle الرئيسي لإضافة الفايربيز
+          # تعديل ملف build.gradle الرئيسي لإضافة الفايربيز مع الهروب من الـ $
           cat <<EOT > temp_build/android/build.gradle
           allprojects {
               repositories {
@@ -59,7 +59,7 @@ jobs:
           }
           rootProject.buildDir = '../build'
           subprojects {
-              project.buildDir = "${rootProject.buildDir}/${project.name}"
+              project.buildDir = "\${rootProject.buildDir}/\${project.name}"
           }
           subprojects {
               project.evaluationDependsOn(':app')
@@ -76,7 +76,7 @@ jobs:
           apply plugin: 'com.google.gms.google-services'
           EOT
 
-          # تعديل ملف settings.gradle لإضافة الـ Classpath الخاص بجوجل سيرفيسز
+          # تعديل ملف settings.gradle لإضافة الـ Classpath الخاص بجوجل سيرفيسز مع الهروب من الـ $
           cat <<EOT > temp_build/android/settings.gradle
           pluginManagement {
               def flutterSdkPath = {
@@ -95,7 +95,7 @@ jobs:
                   return sdkPath
               }()
 
-              includeBuild("$flutterSdkPath/packages/flutter_tools/gradle")
+              includeBuild("\$flutterSdkPath/packages/flutter_tools/gradle")
 
               repositories {
                   google()
