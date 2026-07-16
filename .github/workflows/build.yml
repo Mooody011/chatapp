@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. سحب كود الشات والملفات
+      # 1. سحب الكود من المستودع
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -31,100 +31,47 @@ jobs:
           flutter-version: '3.19.0'
           cache: true
 
-      # 4. بناء مشروع أندرويد نظيف تلقائياً
+      # 4. بناء مشروع أندرويد نظيف ومعتمد تلقائياً
       - name: Recreate clean Flutter project structure
         run: |
           mkdir temp_build
           cd temp_build
           flutter create --org com --project-name chatapp .
 
-      # 5. نقل ملفات الكود والشات والفايربيز للمشروع الجديد النظيف وتعديل الـ Gradle بشكل صحيح
+      # 5. دمج كود الشات وحقن إعدادات الفايربيز بالطريقة الحديثة والمضمونة
       - name: Merge our chat files into the clean project
         run: |
           # نقل الـ dart code والـ pubspec
           cp -f lib/main.dart temp_build/lib/main.dart
           cp -f pubspec.yaml temp_build/pubspec.yaml
           
-          # نقل ملف الفايربيز السحري للمكان المظبوط
+          # نقل ملف الفايربيز السحري للمكان المظبوط تلقائياً
           mkdir -p temp_build/android/app
           cp -f android/app/google-services.json temp_build/android/app/google-services.json
           
-          # تعديل ملف build.gradle الرئيسي لإضافة الفايربيز مع الهروب من الـ $
-          cat <<EOT > temp_build/android/build.gradle
-          allprojects {
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-          }
-          rootProject.buildDir = '../build'
-          subprojects {
-              project.buildDir = "\${rootProject.buildDir}/\${project.name}"
-          }
-          subprojects {
-              project.evaluationDependsOn(':app')
-          }
-          tasks.register("clean", Delete) {
-              delete rootProject.buildDir
-          }
-          EOT
-
-          # تعديل ملف build.gradle الفرعي لتطبيق إضافات الفايربيز الأساسية
-          cat <<EOT >> temp_build/android/app/build.gradle
+          # 1. حقن إضافة الفايربيز في ملف settings.gradle الرئيسي
+          sed -i '/plugins {/a \    id "com.google.gms.google-services" version "4.4.1" apply false' temp_build/android/settings.gradle
           
-          // إضافة تطبيق جوجل سيرفيسز في آخر الملف
-          apply plugin: 'com.google.gms.google-services'
-          EOT
+          # 2. حقن تطبيق الفايربيز في ملف build.gradle الفرعي (داخل block الـ plugins)
+          sed -i '/plugins {/a \    id "com.google.gms.google-services"' temp_build/android/app/build.gradle
+          
+          # 3. رفع الـ minSdkVersion لـ 21 (شرط أساسي لتشغيل الفايربيز)
+          sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 21/g' temp_build/android/app/build.gradle || true
+          sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 21/g' temp_build/android/app/build.gradle || true
 
-          # تعديل ملف settings.gradle لإضافة الـ Classpath الخاص بجوجل سيرفيسز مع الهروب من الـ $
-          cat <<EOT > temp_build/android/settings.gradle
-          pluginManagement {
-              def flutterSdkPath = {
-                  def properties = new Properties()
-                  def propertiesFile = new File(settingsDir, "local.properties")
-                  if (propertiesFile.exists()) {
-                      propertiesFile.withReader("UTF-8") { reader -> properties.load(reader) }
-                  }
-                  def sdkPath = properties.getProperty("flutter.sdk")
-                  if (sdkPath == null) {
-                      sdkPath = System.getenv("FLUTTER_ROOT")
-                  }
-                  if (sdkPath == null) {
-                      throw new GradleException("Flutter SDK not found.")
-                  }
-                  return sdkPath
-              }()
-
-              includeBuild("\$flutterSdkPath/packages/flutter_tools/gradle")
-
-              repositories {
-                  google()
-                  mavenCentral()
-                  gradlePluginPortal()
-              }
-          }
-
-          plugins {
-              id "dev.flutter.flutter-gradle-plugin" version "1.0.0" apply false
-              id "com.google.gms.google-services" version "4.4.1" apply false
-          }
-
-          include ":app"
-          EOT
-
-      # 6. تحميل المكتبات
+      # 6. تحميل المكتبات جوة المشروع الجديد
       - name: Install dependencies
         run: |
           cd temp_build
           flutter pub get
 
-      # 7. بناء الـ APK النهائي
+      # 7. بناء الـ APK النهائي النظيف
       - name: Build APK
         run: |
           cd temp_build
           flutter build apk --release --no-tree-shake-icons
 
-      # 8. رفع الـ APK
+      # 8. رفع الـ APK عشان تحمله
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
