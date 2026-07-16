@@ -38,15 +38,15 @@ jobs:
           cd temp_build
           flutter create --org com.example --project-name chatapp .
           
-          # مسح ملفات الـ gradle الافتراضية عشان نكتب النسخ المتوافقة مع الفايربيز
+          # مسح ملفات الـ gradle الافتراضية لإعادة بنائها بشكل متوافق
           rm -f android/build.gradle
           rm -f android/app/build.gradle
           rm -f android/settings.gradle
 
-      # 5. كتابة ملفات الـ Gradle المتوافقة مع الفايربيز مع سطر الربط التلقائي للـ Plugins
+      # 5. كتابة ملفات الـ Gradle المتوافقة والحديثة المتوافقة مع فلاتر 3.19 والفايربيز
       - name: Write clean compatible Gradle files
         run: |
-          # 1. كتابة settings.gradle الرئيسي (مع سطر ربط الـ Plugins السحري)
+          # 1. كتابة settings.gradle متوافق مع نظام فلاتر 3.19 الحديث
           cat <<'EOF' > temp_build/android/settings.gradle
           pluginManagement {
               def flutterSdkPath = {
@@ -75,16 +75,13 @@ jobs:
           }
 
           plugins {
-              id "dev.flutter.flutter-gradle-plugin" version "1.0.0" apply false
+              id "dev.flutter.flutter-plugin-loader" version "1.0.0"
               id "com.android.application" version "7.3.0" apply false
               id "org.jetbrains.kotlin.android" version "1.7.10" apply false
               id "com.google.gms.google-services" version "4.3.15" apply false
           }
 
           include ":app"
-
-          // السطر السحري لربط جميع الـ Plugins تلقائياً بمشروع الأندرويد
-          apply from: "${settingsDir}/../.flutter-plugins-dependencies"
           EOF
 
           # 2. كتابة build.gradle الرئيسي (Project-level)
